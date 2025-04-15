@@ -1,0 +1,5 @@
+db_config:
+  username: postgres
+  password: postgres
+  server: db:5432
+  db_name: blog_db
