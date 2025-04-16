@@ -3,9 +3,9 @@ package main
 import (
 	"api/config"
 	"api/db"
+	"api/internal/services/server"
 	"fmt"
 	"log"
-	"time"
 )
 
 func main() {
@@ -20,5 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println("Success starting app...")
-	time.Sleep(time.Minute)
+
+	server := server.CreateNewServer()
+	server.Server.ListenAndServe()
 }
