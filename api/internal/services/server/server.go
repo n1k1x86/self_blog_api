@@ -1,13 +1,17 @@
 package server
 
-import "net/http"
+import (
+	"api/config"
+	handler "api/internal/services/server/handlers"
+	"net/http"
+)
 
 type ServerHTTP struct {
 	Server *http.Server
 }
 
-func CreateNewServer() *ServerHTTP {
-	handler := CreateNewHandler()
+func CreateNewServer(cfg config.BlogDBConfig) *ServerHTTP {
+	handler := handler.CreateNewHandler(cfg)
 	server := &http.Server{
 		Addr:    ":8080",
 		Handler: handler.Handler,

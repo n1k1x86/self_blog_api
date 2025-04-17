@@ -21,6 +21,6 @@ func main() {
 	}
 	fmt.Println("Success starting app...")
 
-	server := server.CreateNewServer()
+	server := server.CreateNewServer(cfg.BlogDBConfig)
 	server.Server.ListenAndServe()
 }
