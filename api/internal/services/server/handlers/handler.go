@@ -1,9 +1,11 @@
 package handler
 
 import (
-	"api/config"
 	"fmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const apiName = "/api/v1/"
@@ -16,28 +18,11 @@ func HelloPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Hello, "+apiName)
 }
 
-func AddArticle(w http.ResponseWriter, r *http.Request) {
-}
+func SetHandlersTags(r *gin.Engine, dbpool *pgxpool.Pool) {
+	r.GET(apiName+"tags", GetTags(dbpool))
+	r.GET(apiName+"tags/:id", GetTagByID(dbpool))
 
-func EditArticle(w http.ResponseWriter, r *http.Request) {
-}
-
-func DeleteArticle(w http.ResponseWriter, r *http.Request) {
-}
-
-func GetArticleByID(w http.ResponseWriter, r *http.Request) {
-}
-
-func GetArticleList(w http.ResponseWriter, r *http.Request) {
-}
-
-func CreateNewHandler(cfg config.BlogDBConfig) *Handler {
-	handler := http.NewServeMux()
-	tagHandler := TagsHandlerStruct{cfg: cfg}
-
-	handler.HandleFunc(apiName, HelloPage)
-	handler.HandleFunc(apiName+"tags/", tagHandler.TagsHandler)
-	return &Handler{
-		Handler: handler,
-	}
+	r.PUT(apiName+"tags/:id", EditTag(dbpool))
+	r.POST(apiName+"tags", AddTag(dbpool))
+	r.DELETE(apiName+"tags/:id", DeleteTag(dbpool))
 }

@@ -21,6 +21,9 @@ func main() {
 	}
 	fmt.Println("Success starting app...")
 
-	server := server.CreateNewServer(cfg.BlogDBConfig)
-	server.Server.ListenAndServe()
+	server, err := server.CreateNewServer(cfg.BlogDBConfig)
+	if err != nil {
+		log.Fatalf("error, application is aborted: ", err)
+	}
+	server.Engine.Run()
 }

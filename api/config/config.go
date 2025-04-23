@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -15,6 +16,15 @@ type BlogDBConfig struct {
 	Password string `yaml:"password"`
 	Server   string `yaml:"server"`
 	DBName   string `yaml:"db_name"`
+}
+
+func (b BlogDBConfig) BuildDSN() string {
+	return fmt.Sprintf(`postgres://%s:%s@%s/%s?sslmode=disable`,
+		b.Username,
+		b.Password,
+		b.Server,
+		b.DBName,
+	)
 }
 
 func ReadConfig() (*Config, error) {

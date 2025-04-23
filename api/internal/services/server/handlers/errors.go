@@ -1,13 +1,19 @@
 package handler
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func Handle505Error(err error, w http.ResponseWriter) {
-	err505, _ := json.Marshal(fmt.Sprintf(`{"error": %s}`, err.Error()))
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(err505)
+func Handle400Error(c *gin.Context) {
+	c.AbortWithStatus(http.StatusBadRequest)
+}
+
+func Handle404Error(c *gin.Context, err error) {
+	c.AbortWithError(http.StatusNotFound, err)
+}
+
+func Handle505Error(c *gin.Context, err error) {
+	c.AbortWithError(http.StatusInternalServerError, err)
 }

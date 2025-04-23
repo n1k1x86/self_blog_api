@@ -1,67 +1,159 @@
 package handler
 
 import (
-	"api/config"
 	"api/db/models"
+	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/ydb-platform/ydb-go-sdk/v3/log"
 )
 
-type TagsHandlerStruct struct {
-	cfg config.BlogDBConfig
-}
+func AddTag(dbpool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*3)
+		defer cancel()
 
-func (h *TagsHandlerStruct) AddTag(w http.ResponseWriter, r *http.Request) {
-	bodyData, err := io.ReadAll(r.Body)
-	if err != nil {
-		Handle505Error(err, w)
-		return
-	}
-	id, err := models.AddTag(h.cfg, bodyData)
-	if err != nil {
-		Handle505Error(err, w)
-		return
-	}
-	successRes, err := json.Marshal(fmt.Sprintf(`{"tag_id": %d}`, id))
-	if err != nil {
-		Handle505Error(err, w)
-		return
-	}
-	w.Write(successRes)
-	w.Header().Add("Content-Type", "application/json")
-}
+		bodyData, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			Handle505Error(c, err)
+			return
+		}
 
-func (h *TagsHandlerStruct) EditTag(w http.ResponseWriter, r *http.Request) {
-}
-
-func (h *TagsHandlerStruct) DeleteTag(w http.ResponseWriter, r *http.Request) {
-}
-
-func (h *TagsHandlerStruct) GetTags(w http.ResponseWriter, r *http.Request) {
-	result, err := models.GetTags(h.cfg)
-	if err != nil {
-		Handle505Error(err, w)
-		return
-	}
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(result)
-}
-
-func (h *TagsHandlerStruct) GetTagByID(w http.ResponseWriter, r *http.Request) {
-}
-
-func (h *TagsHandlerStruct) TagsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		h.GetTags(w, r)
-		return
-	}
-	if r.Method == http.MethodPost {
-		h.AddTag(w, r)
-		return
+		tag := models.TagREST{}
+		err = json.Unmarshal(bodyData, &tag)
+		if err != nil {
+			Handle505Error(c, err)
+			return
+		}
+		err = models.AddTag(ctx, dbpool, &tag)
+		if err != nil {
+			Handle505Error(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, tag)
 	}
 }
 
-func (h *TagsHandlerStruct) TagHandler(w http.ResponseWriter, r *http.Request) {
+func GetTags(dbpool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*3)
+		defer cancel()
+
+		result, err := models.GetTags(ctx, dbpool)
+		if err != nil {
+			log.Error(err)
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	}
+}
+
+func EditTag(dbpool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			Handle505Error(c, err)
+			return
+		}
+		var tag models.TagREST
+		err = json.Unmarshal(body, &tag)
+		if err != nil {
+			Handle505Error(c, err)
+			return
+		}
+
+		idQuery, ok := c.Params.Get("id")
+		if !ok {
+			Handle404Error(c, err)
+			return
+		}
+
+		id, err := strconv.Atoi(idQuery)
+		if err != nil {
+			Handle400Error(c)
+			return
+		}
+		tag.ID = int64(id)
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*3)
+		defer cancel()
+
+		err = models.EditTag(ctx, dbpool, &tag)
+		if err != nil {
+			if errors.Is(err, models.ErrNotFound) {
+				Handle404Error(c, err)
+				return
+			}
+			Handle505Error(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, tag)
+	}
+
+}
+
+func DeleteTag(dbpool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*3)
+		defer cancel()
+		idQuery, ok := c.Params.Get("id")
+		if !ok {
+			Handle400Error(c)
+			return
+		}
+		id, err := strconv.Atoi(idQuery)
+		if err != nil {
+			Handle400Error(c)
+			return
+		}
+
+		err = models.DeleteTag(ctx, dbpool, int64(id))
+		if err != nil {
+			if errors.Is(err, models.ErrNotFound) {
+				Handle404Error(c, err)
+				return
+			}
+			Handle505Error(c, err)
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
+}
+
+func GetTagByID(dbpool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*3)
+		defer cancel()
+
+		idQuery, ok := c.Params.Get("id")
+		if !ok {
+			Handle400Error(c)
+			return
+		}
+		id, err := strconv.Atoi(idQuery)
+		if err != nil {
+			Handle404Error(c, err)
+			return
+		}
+
+		tag, err := models.GetTagByID(ctx, dbpool, int64(id))
+		if err != nil {
+			if errors.Is(err, models.ErrNotFound) {
+				Handle404Error(c, err)
+				return
+			}
+			Handle505Error(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, tag)
+	}
 }
