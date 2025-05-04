@@ -15,8 +15,8 @@ type TagDB struct {
 }
 
 type TagREST struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   int64  `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 func TagDBToREST(tag *TagDB) (*TagREST, error) {
@@ -45,6 +45,17 @@ func TagDBToREST(tag *TagDB) (*TagREST, error) {
 		ID:   id,
 		Name: name,
 	}, nil
+}
+
+func IsTagExist(ctx context.Context, dbpool *pgxpool.Pool, tagID int64) error {
+	query := `SELECT id FROM tags WHERE id = $1`
+	res := dbpool.QueryRow(ctx, query, tagID)
+	var id int64
+	err := res.Scan(&id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddTag(ctx context.Context, dbpool *pgxpool.Pool, tag *TagREST) error {

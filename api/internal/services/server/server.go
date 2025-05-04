@@ -37,6 +37,7 @@ func CreateNewServer(cfg config.BlogDBConfig) (*GinServer, error) {
 	router := gin.Default()
 
 	handler.SetHandlersTags(router, pool)
+	handler.SetHandlersArticle(router, pool)
 
 	return &GinServer{
 		Engine:   router,
